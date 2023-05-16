@@ -12,7 +12,7 @@ class Client:
         self.__token = None
 
         if not self.__generate_token()[0]:
-            raise PermissionError(f"It appears that the refresh token provided is invalid")
+            raise PermissionError("It appears that the refresh token provided is invalid")
 
     def __generate_token(self):
         """https://developers.ax-semantics.com/docs/ax-nlg-cloud-api/16ada9886f63d-token-exchange"""
@@ -28,13 +28,27 @@ class Client:
         else:
             return False, response.read()
 
-    def __token(self):
-        if not self.__last_update or not self.__token: self.__generate_token()
-        elif (self.__last_update + self.__renew_interval) < time.time(): self.__generate_token()
+    def __get_token(self):
+        if not self.__last_update or not self.__token:
+            self.__generate_token()
+        elif (self.__last_update + self.__renew_interval) < time.time():
+            self.__generate_token()
         return self.__token
 
     def __headers(self):
         return {
-            "authorization": f"JWT {self.__token()}",
+            "authorization": f"JWT {self.__get_token()}",
             "content-type": "application/json"
         }
+
+    def __request(self, request_method: str, url: str, payload, headers: dict = None):
+        if not headers:
+            headers = self.__headers()
+        self.__https_connection.request(request_method, url, payload, headers)
+        response = self.__https_connection.getresponse()
+
+        return response.getcode(), response.read().decode("utf-8")
+
+    def list_storyexports(self):
+        response = self.__request(request_method="GET", url="/v3/story-exports", payload="")
+        print(response)
